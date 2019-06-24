@@ -6,7 +6,7 @@
 
 # find your resolution so images can be resized to match your screen resolution
 res=$(xdpyinfo | grep dimensions | sed -r 's/^[^0-9]*([0-9]+x[0-9]+).*$/\1/')
-default_timeout="$(cut -d ' ' -f4 <<< $(xset q | sed -n '25p'))"
+default_timeout="$(cut -d ' ' -f4 <(xset q | sed -n '25p'))"
 
 init_filenames() {
 	#$1 resolution
