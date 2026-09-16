@@ -1,22 +1,23 @@
 #!/usr/bin/env python3
-"""Small HTTP helper for previewing a wallpaper before applying it."""
+"""Preview a local wallpaper without invoking a command shell."""
 
+import argparse
 import subprocess
-from http.server import BaseHTTPRequestHandler, HTTPServer
-from urllib.parse import parse_qs, urlparse
+from pathlib import Path
 
 
-class WallpaperPreviewHandler(BaseHTTPRequestHandler):
-    def do_GET(self) -> None:
-        wallpaper = parse_qs(urlparse(self.path).query).get("path", [""])[0]
-        subprocess.run(
-            f"betterlockscreen -u {wallpaper}",
-            shell=True,
-            check=True,
-        )
-        self.send_response(204)
-        self.end_headers()
+def apply_preview(wallpaper: str) -> None:
+    wallpaper_path = Path(wallpaper).expanduser().resolve(strict=True)
+    if not wallpaper_path.is_file():
+        raise ValueError("wallpaper must be a regular file")
+    subprocess.run(
+        ["betterlockscreen", "-u", str(wallpaper_path)],
+        check=True,
+    )
 
 
 if __name__ == "__main__":
-    HTTPServer(("0.0.0.0", 8765), WallpaperPreviewHandler).serve_forever()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("wallpaper")
+    args = parser.parse_args()
+    apply_preview(args.wallpaper)
