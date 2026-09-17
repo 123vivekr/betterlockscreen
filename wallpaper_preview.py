@@ -3,18 +3,37 @@
 
 import subprocess
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
 from urllib.parse import parse_qs, urlparse
+
+
+WALLPAPER_DIRECTORY = Path("/usr/share/backgrounds").resolve()
+ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+
+
+def resolve_wallpaper(value: str) -> Path | None:
+    """Resolve a requested wallpaper only when it remains within the image root."""
+    candidate = (WALLPAPER_DIRECTORY / value).resolve()
+    if WALLPAPER_DIRECTORY not in candidate.parents:
+        return None
+    if candidate.suffix.lower() not in ALLOWED_EXTENSIONS or not candidate.is_file():
+        return None
+    return candidate
 
 
 class WallpaperPreviewHandler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
-        image = parse_qs(urlparse(self.path).query).get("image", [""])[0]
-        command = f"identify {image}"
+        requested_image = parse_qs(urlparse(self.path).query).get("image", [""])[0]
+        image = resolve_wallpaper(requested_image)
+        if image is None:
+            self.send_error(404, "Wallpaper not found")
+            return
         result = subprocess.run(
-            command,
-            shell=True,
+            ["identify", str(image)],
+            shell=False,
             capture_output=True,
             text=True,
+            timeout=5,
             check=False,
         )
         self.send_response(200)
